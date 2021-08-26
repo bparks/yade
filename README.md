@@ -1,12 +1,10 @@
-yade
-====
+# yade
 
 `yade` stands for Yet Another Database Engine. The thing is... it's not really
 a database engine at all. But `yade` is too good of a name to pass up. What
 can I say? I'm yaded.
 
-What does it do?
-----------------
+## What does it do?
 
 The intent is for yade to provide a MySQL-compatible interface on top of YAML
 files.
