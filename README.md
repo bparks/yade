@@ -10,6 +10,8 @@ The intent is for yade to provide a MySQL-compatible interface on top of YAML
 files. This is useful, for instance, if you want to store your CMS config in
 a git repository.
 
+**NOTE**: We're not there yet. Currently, we just have a service that a mysql client will successfully connect to and get nothing back from any query.
+
 Run yade like
 
     yade ./path/to/yaml/files
