@@ -7,7 +7,8 @@ can I say? I'm yaded.
 ## What does it do?
 
 The intent is for yade to provide a MySQL-compatible interface on top of YAML
-files.
+files. This is useful, for instance, if you want to store your CMS config in
+a git repository.
 
 Run yade like
 
