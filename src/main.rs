@@ -23,6 +23,24 @@ fn main() {
         // To which we'll respond with "OK"
         let ok_packet = Vec::from_hex("0700000200000002000000").unwrap();
         stream.write(&ok_packet).unwrap();
-        //println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
+
+        // From here on, client will send us commands; we should handle them reasonably
+        loop {
+            for elem in buffer.iter_mut() { *elem = 0; }
+            stream.read(&mut buffer).unwrap();
+            println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
+
+            // Layout of message is 3 bytes for length, 1 byte for packet #, 1 byte for command
+            let packet_num = buffer[3];
+            let command = buffer[4];
+            if command == 0x0e  {// Ping
+                let ping_ok = Vec::from_hex("0700000100000002000000").unwrap();
+                stream.write(&ping_ok).unwrap();
+            } else {
+                println!("Unhandled message {}; packet number {}", command, packet_num);
+                let ping_ok = Vec::from_hex("0700000100000002000000").unwrap();
+                stream.write(&ping_ok).unwrap();
+            }
+        }
     }
 }
