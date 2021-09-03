@@ -1,8 +1,11 @@
+use std::path::Path;
 use std::convert::TryInto;
 use hex::FromHex;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::fs;
+
+mod sql;
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
@@ -42,8 +45,14 @@ fn main() {
                 let statement = &buffer[5..];
                 println!("Query: {}", String::from_utf8_lossy(statement));
 
+                let stmt = String::from_utf8_lossy(statement);
+                let table = sql::parse(&stmt);
+
+                println!("Querying table {}", table);
+
                 if String::from_utf8_lossy(statement).starts_with("select * from things") {
-                    let list_of_files = fs::read_dir("./data").unwrap().filter_map(|f| f.ok().and_then(|e| e.path().file_name().and_then(|n| n.to_str().map(|s| String::from(s))))).collect();
+                    let path = format!("{}{}", "./data/", table);
+                    let list_of_files = if Path::new(&path).exists() { fs::read_dir(path).unwrap().filter_map(|f| f.ok().and_then(|e| e.path().file_name().and_then(|n| n.to_str().map(|s| String::from(s))))).collect() } else { Vec::new() };
                     let ping_ok = build_response(list_of_files);
                     //println!("{:02x?}", &ping_ok);
                     stream.write(&ping_ok).unwrap();
