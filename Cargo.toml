@@ -8,3 +8,4 @@ edition = "2018"
 [dependencies]
 hex = "0.4.3"
 nom = "7"
+yaml-rust = "0.4"

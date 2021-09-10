@@ -1,4 +1,3 @@
-use nom::IResult;
 use nom::bytes::complete::tag;
 use nom::character::complete::{alphanumeric1, space1};
 use nom::sequence::tuple;

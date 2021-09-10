@@ -1,9 +1,12 @@
+extern crate yaml_rust;
+
 use std::path::Path;
 use std::convert::TryInto;
 use hex::FromHex;
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::fs;
+use yaml_rust::YamlLoader;
 
 mod sql;
 
@@ -52,7 +55,26 @@ fn main() {
 
                 if String::from_utf8_lossy(statement).starts_with("select * from things") {
                     let path = format!("{}{}", "./data/", table);
-                    let list_of_files = if Path::new(&path).exists() { fs::read_dir(path).unwrap().filter_map(|f| f.ok().and_then(|e| e.path().file_name().and_then(|n| n.to_str().map(|s| String::from(s))))).collect() } else { Vec::new() };
+                    let list_of_files = if Path::new(&path).exists() {
+                        let mut file = fs::File::open(format!("{}/{}", path, "schema.yml")).expect("Unable to open file");
+                        let mut contents = String::new();
+                        file.read_to_string(&mut contents).expect("Unable to read file");
+                        let schema = &YamlLoader::load_from_str(&contents).unwrap()[0];
+                        let schema_hash = schema.as_hash().unwrap();
+                        let fields = schema_hash.keys().map(|k| k.clone().into_string().unwrap());
+
+                        for f in fields {
+                            println!("{:?}", f);
+                        }
+
+                        fs::read_dir(path).unwrap()
+                            .filter_map(|f| f.ok()
+                                .and_then(|e| e.path().file_name()
+                                    .and_then(|n| n.to_str().map(|s| String::from(s)))))
+                            .collect()
+                    } else {
+                        Vec::new()
+                    };
                     let ping_ok = build_response(list_of_files);
                     //println!("{:02x?}", &ping_ok);
                     stream.write(&ping_ok).unwrap();
