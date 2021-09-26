@@ -1,8 +1,8 @@
+use yaml_rust::Yaml::Integer;
 use std::path::Path;
 use std::fs;
 use std::iter::Iterator;
 use std::io::Read;
-use std::str::FromStr;
 use yaml_rust::YamlLoader;
 
 pub struct ResultSet {
@@ -22,15 +22,15 @@ pub fn list_files(path: &String) -> ResultSet {
             rows: None
         };
 
-        for f in &rs.fields {
+        /*for f in &rs.fields {
             println!("{:?}", f);
-        }
+        }*/
 
         rs.rows = Some(fs::read_dir(path).unwrap()
             .filter_map(|f| f.ok()
                 .and_then(|e| e.path().file_name()
                     .and_then(|n| {
-                        println!("{:?}", &n);
+                        //println!("{:?}", &n);
 
                         if n != "schema.yml" {
 
@@ -39,7 +39,7 @@ pub fn list_files(path: &String) -> ResultSet {
                             rfile.read_to_string(&mut rcontents).expect("Unable to read file");
                             let record = &YamlLoader::load_from_str(&rcontents).unwrap()[0];
 
-                            return Some(rs.fields.iter().map(|f| record[f.as_str()].as_str().unwrap_or("")).map(|s| String::from_str(s).unwrap()).collect::<Vec<String>>());
+                            return Some(rs.fields.iter().map(|f| stringify(&record[f.as_str()])).collect::<Vec<String>>());
                         } else { None }
                     })))
             .collect());
@@ -47,5 +47,12 @@ pub fn list_files(path: &String) -> ResultSet {
         return rs;
     } else {
         return ResultSet { fields: Vec::new(), rows: None };
+    }
+}
+
+fn stringify(yval: &yaml_rust::Yaml) -> String {
+    match yval {
+        Integer(i) => i.to_string(),
+        s => s.as_str().unwrap_or("").to_string()
     }
 }

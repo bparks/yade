@@ -162,13 +162,12 @@ fn build_eof(buf: &mut Vec<u8>, pkt_no: u8, status: u16) -> u8 {
 
 fn build_row(buf: &mut Vec<u8>, pkt_no: u8, row: &Vec<String>) -> u8 {
     let length = (row.iter().fold(0, |a, x| a + x.len() + 1)).try_into().unwrap();
-    println!("{}", length);
+
     buf.push(length); // Length
     buf.push(0);
     buf.push(0);
     buf.push(pkt_no);
     for item in row {
-        println!("{}", item);
         len_coded_string(buf, item.as_str());
     }
     
