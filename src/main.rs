@@ -84,9 +84,12 @@ fn build_response(results: ResultSet) -> Vec<u8> {
 
     let mut pkt_no = 1;
 
-    pkt_no += build_field_headers(&mut buf, pkt_no);
+    pkt_no += build_field_start(&mut buf, pkt_no, results.fields.len().try_into().unwrap());
+    for item in &results.fields {
+        pkt_no += build_field_headers(&mut buf, pkt_no, item);
+    }
     pkt_no += build_eof(&mut buf, pkt_no, 0x0022);
-    for item in results.fields {
+    for item in &results.rows.unwrap() {
         pkt_no += build_row(&mut buf, pkt_no, item);
     }
     build_eof(&mut buf, pkt_no, 0x0002);
@@ -94,17 +97,20 @@ fn build_response(results: ResultSet) -> Vec<u8> {
     return buf;
 }
 
-fn build_field_headers(buf: &mut Vec<u8>, mut pkt_no: u8) -> u8 {
+fn build_field_start(buf: &mut Vec<u8>, pkt_no: u8, len: u8) -> u8 {
     // How many fields?
     buf.push(1); // Length
     buf.push(0);
     buf.push(0);
     buf.push(pkt_no); // Packet number
-    buf.push(1); // Number of fields
-    pkt_no = pkt_no + 1;
+    buf.push(len); // Number of fields
 
+    return 1;
+}
+
+fn build_field_headers(buf: &mut Vec<u8>, pkt_no: u8, field: &String) -> u8 {
     // First field
-    let packet_len = "def".len() + "demo".len() + "demotable".len() + "demotable".len() + "col".len() + "col".len() + 6 + 1 + 2 + 4 + 1 + 2 + 1 + 2;
+    let packet_len = "def".len() + "demo".len() + "demotable".len() + "demotable".len() + field.len() + field.len() + 6 + 1 + 2 + 4 + 1 + 2 + 1 + 2;
 
     buf.push((packet_len).try_into().unwrap());
     buf.push(0);
@@ -114,8 +120,8 @@ fn build_field_headers(buf: &mut Vec<u8>, mut pkt_no: u8) -> u8 {
     len_coded_string(buf, "demo"); // Database
     len_coded_string(buf, "demotable"); // Table
     len_coded_string(buf, "demotable"); // Original Table
-    len_coded_string(buf, "col"); // Column name
-    len_coded_string(buf, "col"); // Orginal name
+    len_coded_string(buf, field.as_str()); // Column name
+    len_coded_string(buf, field.as_str()); // Orginal name
     buf.push(0x0c); // Length of fixed length fields
     buf.push(0x2d); // Charset (utf8mb4)
     buf.push(0);
@@ -129,7 +135,6 @@ fn build_field_headers(buf: &mut Vec<u8>, mut pkt_no: u8) -> u8 {
     buf.push(0); // Decimals
     buf.push(0); // Filler
     buf.push(0);
-    //pkt_no = pkt_no + 1;
 
     return 2;
 }
@@ -155,12 +160,17 @@ fn build_eof(buf: &mut Vec<u8>, pkt_no: u8, status: u16) -> u8 {
     return 1;
 }
 
-fn build_row(buf: &mut Vec<u8>, pkt_no: u8, item: String) -> u8 {
-    buf.push((item.len() + 1).try_into().unwrap()); // Length
+fn build_row(buf: &mut Vec<u8>, pkt_no: u8, row: &Vec<String>) -> u8 {
+    let length = (row.iter().fold(0, |a, x| a + x.len() + 1)).try_into().unwrap();
+    println!("{}", length);
+    buf.push(length); // Length
     buf.push(0);
     buf.push(0);
     buf.push(pkt_no);
-    len_coded_string(buf, item.as_str());
+    for item in row {
+        println!("{}", item);
+        len_coded_string(buf, item.as_str());
+    }
     
     return 1;
 }
