@@ -8,9 +8,14 @@ use nom::bytes::complete::tag;
 use nom::character::complete::{alphanumeric1, space1};
 use nom::sequence::tuple;
 
+pub struct Setter {
+    pub column: String,
+    pub value: String
+}
+
 pub enum Statement {
     Select(String),
-    Update(String)
+    Update(String, Option<Vec<Setter>>)
 }
 
 pub fn parse(s: &str) -> Statement {
@@ -32,9 +37,15 @@ pub fn parse(s: &str) -> Statement {
     }
     fn update_stmt(s: &str) -> IResult<&str, Statement> {
         let mut update = tuple((tag("update"), space1, alphanumeric1, space1, tag("set"), space1, set_value_clause, many0(tuple((space0, tag(","), space0, set_value_clause)))));
-        let (s, (_, _, table, _, _, _, _, _)) = update(s)?;
+        let (s, (_, _, table, _, _, _, first_setter, additional_setters)) = update(s)?;
 
-        return Ok((s, Statement::Update(table.to_string())))
+        let mut setters: Vec<&(&str, &str)> = additional_setters.iter().map(|(_, _, _, setter)| setter).collect();
+        setters.push(&first_setter);
+
+        return Ok((s, Statement::Update(table.to_string(), Some(setters.iter().map(|(col, val)| Setter {
+            column: col.to_string(),
+            value: val.to_string()
+        }).collect()))))
     }
 
     let mut parser = alt((select_stmt, update_stmt));
