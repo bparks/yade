@@ -64,14 +64,16 @@ fn main() {
                             stream.write(&ping_ok).unwrap();
                         }
                     }
-                    Statement::Update(table, setters) => {
+                    Statement::Update(table, setters, _predicate) => {
                         println!("Updating table {}", table);
                         println!("Setting fields...");
                         match setters {
-                            Some(unwrapped_setters) => {
-                                for setter in &unwrapped_setters {
-                                    println!("{} = {}", setter.column, setter.value);
-                                }
+                            Some(_unwrapped_setters) => {
+                                //for setter in &unwrapped_setters {
+                                    // TODO: Make sql::Value displayable
+                                    //println!("{} = {}", setter.column, setter.value);
+                                //}
+                                println!("SOME!");
                             }
                             None => {
                                 println!("NONE!");
