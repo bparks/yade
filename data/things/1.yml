@@ -1,4 +1,6 @@
+---
 id: 1
 name: John
 type: person
 date: 2021-09-15
+blah: something
