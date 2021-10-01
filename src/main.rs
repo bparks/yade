@@ -34,7 +34,8 @@ fn main() {
         // From here on, client will send us commands; we should handle them reasonably
         loop {
             for elem in buffer.iter_mut() { *elem = 0; }
-            stream.read(&mut buffer).unwrap();
+            let result = stream.read(&mut buffer);
+            if matches!(result, Err(_)) { break; }
             //println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
 
             // Layout of message is 3 bytes for length, 1 byte for packet #, 1 byte for command
@@ -61,7 +62,10 @@ fn main() {
             } else {
                 println!("Unhandled message {}; packet number {}", command, packet_num);
                 let ping_ok = Vec::from_hex("0700000100000002000000").unwrap();
-                stream.write(&ping_ok).unwrap();
+                match stream.write(&ping_ok) {
+                    Ok(_) => {},
+                    Err(_) => break
+                };
             }
         }
     }
@@ -105,6 +109,7 @@ fn execute_stmt(stmt: Statement, statement: &str, stream: &mut impl Write) {
             println!("Updated {} records", num_updated);
 
             //Temporarily send an OK
+            // TODO: Need to show the proper number of affected rows
             let ping_ok = Vec::from_hex("0700000100000002000000").unwrap();
             stream.write(&ping_ok).unwrap();
         }
