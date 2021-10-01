@@ -84,7 +84,9 @@ fn save_yaml_file(s: &String, y: &Yaml) {
 fn evaluate_value(y: &Yaml, value: &Value) -> String {
     return match value {
         Value::Column(column_name) => stringify(&y[column_name.as_str()]),
-        Value::StringLiteral(val) => val.clone()
+        Value::StringLiteral(val) => val.clone(),
+        Value::SystemValue(_sys_val) => String::new(),
+        Value::Asterisk(_) => panic!("Asterisk is not valid here")
     }
 }
 
@@ -131,7 +133,9 @@ pub fn update_files(path: &String, setters: &Option<Vec<Setter>>, predicate: &Op
                         Value::Column(col_name) => {
                             hash.insert(Yaml::from_str(col_name), Yaml::from_str(evaluate_value(&y, &setter.value).as_str()));
                         },
-                        Value::StringLiteral(_) => panic!("You can't set a value to a string literal!")
+                        Value::SystemValue(_) => panic!("Setting system values is not yet supported"),
+                        Value::StringLiteral(_) => panic!("You can't set a value to a string literal!"),
+                        Value::Asterisk(_) => panic!("You can't set a value to an asterisk!")
                     }
                 }
                 save_yaml_file(&filename, &Yaml::Hash(hash));

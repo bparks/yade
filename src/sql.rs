@@ -1,3 +1,5 @@
+use nom::Parser;
+use nom::error::ParseError;
 use core::fmt::Display;
 use nom::error::{Error, ErrorKind};
 use nom::Err;
@@ -21,7 +23,9 @@ pub struct Setter {
 #[derive(Clone, Debug)]
 pub enum Value {
     Column(String),
-    StringLiteral(String)
+    StringLiteral(String),
+    SystemValue(String),
+    Asterisk(Option<String>)
 }
 
 pub enum Predicate {
@@ -45,7 +49,7 @@ pub enum Statement {
     Update(String, Option<Vec<Setter>>, Option<Predicate>)
 }
 
-pub fn parse(s: &str) -> Statement {
+pub fn parse(s: &str) -> Option<Statement> {
 
     fn parse_column_name(s: &str) -> IResult<&str, Value> {
         let (s, col_name) = alphanumeric1(s)?;
@@ -57,8 +61,33 @@ pub fn parse(s: &str) -> Statement {
         return Ok((s, Value::StringLiteral(value.to_string())));
     }
 
+    fn parse_system_value(s: &str) -> IResult<&str, Value> {
+        let (s, (_, var_name)) = tuple((tag("@@"), alphanumeric1))(s)?;
+        return Ok((s, Value::SystemValue(var_name.to_string())));
+    }
+
+    fn parse_asterisk(s: &str) -> IResult<&str, Value> {
+        let (s, _) = tag("*")(s)?;
+        return Ok((s, Value::Asterisk(None)))
+    }
+
+    // TODO: Something is wrong with `parse_to`. See below
+    fn parse_to<I, O, E: ParseError<I>, P>(mut parser: P, val: O) -> impl FnMut(I) -> IResult<I, O, E> where P: Parser<I, O, E>, O: Copy {
+        return move |s| {
+            let (s, _) = parser.parse(s)?;
+            return Ok((s, val));
+        }
+    }
+
     fn parse_value(s: &str) -> IResult<&str, Value> {
-        return delimited(space0, alt((parse_column_name, parse_string_literal)), space0)(s);
+        return delimited(space0, alt((
+            parse_column_name,
+            parse_string_literal,
+            parse_system_value,
+            // TODO: Something is wrong with `parse_to`. See above
+            //parse_to(tag("*"), Value::Asterisk),
+            parse_asterisk,
+        )), space0)(s);
     }
 
     fn set_value_clause(s: &str) -> IResult<&str, Setter> {
@@ -104,9 +133,17 @@ pub fn parse(s: &str) -> Statement {
         }
     }
 
+    fn parse_value_list(s: &str) -> IResult<&str, Vec<Value>> {
+        let (s, (value1, addtl_values)) = tuple((parse_value, many0(tuple((tag(","), parse_value)))))(s)?;
+        let mut value_list = Vec::new();
+        value_list.push(value1);
+        let _ = addtl_values.into_iter().map(|(_, valuen)| value_list.push(valuen));
+        return Ok((s, value_list));
+    }
+
     fn select_stmt(s: &str) -> IResult<&str, Statement> {
-        let mut select = tuple((tag("select"), space1, tag("*"), space1, tag("from"), space1, alphanumeric1));
-        let (s, (_, _, _, _, _, _, table)) = select(s)?;
+        let mut select = tuple((tag("select"), space1, parse_value_list, tag("from"), space1, alphanumeric1));
+        let (s, (_, _, _values, _, _, table)) = select(s)?;
 
         return Ok((s, Statement::Select(table.to_string())));
     }
@@ -132,7 +169,9 @@ pub fn parse(s: &str) -> Statement {
 
     let mut parser = alt((select_stmt, update_stmt));
 
-    let (_, stmt) = parser(s).unwrap();
-
-    return stmt;
+    let result = parser(s);
+    return match result {
+        Ok((_, stmt)) => Some(stmt),
+        Err(_) => None
+    }
 }
