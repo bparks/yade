@@ -1,3 +1,4 @@
+use core::fmt::Display;
 use nom::error::{Error, ErrorKind};
 use nom::Err;
 use nom::combinator::opt;
@@ -17,7 +18,7 @@ pub struct Setter {
     pub value: Value
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Column(String),
     StringLiteral(String)
@@ -27,6 +28,16 @@ pub enum Predicate {
     Equals(Value, Value),
     And(Box<Predicate>, Box<Predicate>),
     Or(Box<Predicate>, Box<Predicate>)
+}
+
+impl Display for Predicate {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Predicate::Equals(value1, value2) => write!(f, "{:?} = {:?}", value1, value2),
+            Predicate::And(predicate1, predicate2) => write!(f, "{} and {}", predicate1, predicate2),
+            Predicate::Or(predicate1, predicate2) => write!(f, "{} or {}", predicate1, predicate2)
+        }
+    }
 }
 
 pub enum Statement {
