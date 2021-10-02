@@ -1,5 +1,5 @@
-use nom::Parser;
-use nom::error::ParseError;
+/*use nom::Parser;
+use nom::error::ParseError;*/
 use core::fmt::Display;
 use nom::error::{Error, ErrorKind};
 use nom::Err;
@@ -72,12 +72,12 @@ pub fn parse(s: &str) -> Option<Statement> {
     }
 
     // TODO: Something is wrong with `parse_to`. See below
-    fn parse_to<I, O, E: ParseError<I>, P>(mut parser: P, val: O) -> impl FnMut(I) -> IResult<I, O, E> where P: Parser<I, O, E>, O: Copy {
+    /*fn parse_to<I, O, E: ParseError<I>, P>(mut parser: P, val: O) -> impl FnMut(I) -> IResult<I, O, E> where P: Parser<I, O, E>, O: Copy {
         return move |s| {
             let (s, _) = parser.parse(s)?;
             return Ok((s, val));
         }
-    }
+    }*/
 
     fn parse_value(s: &str) -> IResult<&str, Value> {
         return delimited(space0, alt((
