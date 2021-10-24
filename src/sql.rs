@@ -49,8 +49,6 @@ pub enum Statement {
     Update(String, Option<Vec<Setter>>, Option<Predicate>)
 }
 
-pub fn parse(s: &str) -> Option<Statement> {
-
     fn parse_column_name(s: &str) -> IResult<&str, Value> {
         let (s, col_name) = alphanumeric1(s)?;
         return Ok((s, Value::Column(col_name.to_string())));
@@ -166,6 +164,8 @@ pub fn parse(s: &str) -> Option<Statement> {
 
         return Ok((s, Statement::Update(table.to_string(), Some(setters), where_val)))
     }
+
+pub fn parse(s: &str) -> Option<Statement> {
 
     let mut parser = alt((select_stmt, update_stmt));
 
