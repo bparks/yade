@@ -1,9 +1,9 @@
 extern crate yaml_rust;
 
-use crate::store::ResultSet;
 use crate::sql::Statement;
-use std::convert::TryInto;
+use crate::store::ResultSet;
 use hex::FromHex;
+use std::convert::TryInto;
 use std::io::prelude::*;
 use std::net::TcpListener;
 
@@ -33,18 +33,24 @@ fn main() {
 
         // From here on, client will send us commands; we should handle them reasonably
         loop {
-            for elem in buffer.iter_mut() { *elem = 0; }
+            for elem in buffer.iter_mut() {
+                *elem = 0;
+            }
             let result = stream.read(&mut buffer);
-            if matches!(result, Err(_)) { break; }
+            if matches!(result, Err(_)) {
+                break;
+            }
             //println!("Request: {}", String::from_utf8_lossy(&buffer[..]));
 
             // Layout of message is 3 bytes for length, 1 byte for packet #, 1 byte for command
             let packet_num = buffer[3];
             let command = buffer[4];
-            if command == 0x0e { // Ping
+            if command == 0x0e {
+                // Ping
                 let ping_ok = Vec::from_hex("0700000100000002000000").unwrap();
                 stream.write(&ping_ok).unwrap();
-            } else if command == 0x03 { // Query
+            } else if command == 0x03 {
+                // Query
                 //let packet_length = buffer[2] << 16 + buffer[1] << 8 + buffer[0] - 1;
                 let statement = &buffer[5..];
                 println!("Query: {}", String::from_utf8_lossy(statement));
@@ -60,11 +66,14 @@ fn main() {
                     }
                 }
             } else {
-                println!("Unhandled message {}; packet number {}", command, packet_num);
+                println!(
+                    "Unhandled message {}; packet number {}",
+                    command, packet_num
+                );
                 let ping_ok = Vec::from_hex("0700000100000002000000").unwrap();
                 match stream.write(&ping_ok) {
-                    Ok(_) => {},
-                    Err(_) => break
+                    Ok(_) => {}
+                    Err(_) => break,
                 };
             }
         }
@@ -113,6 +122,19 @@ fn execute_stmt(stmt: Statement, statement: &str, stream: &mut impl Write) {
             let ping_ok = Vec::from_hex("0700000100000002000000").unwrap();
             stream.write(&ping_ok).unwrap();
         }
+        Statement::CreateTable(table, columns) => {
+            println!("Creating table {}", table);
+            println!("Columns:");
+            for column in &columns {
+                println!("  {:?}", column);
+            }
+
+            let path = format!("{}{}", "./data/", table);
+            store::create_table(&path, &columns);
+
+            let ping_ok = Vec::from_hex("0700000100000002000000").unwrap();
+            stream.write(&ping_ok).unwrap();
+        }
     }
     println!("Done executing statement");
 }
@@ -156,7 +178,20 @@ fn build_field_start(buf: &mut Vec<u8>, pkt_no: u8, len: u8) -> u8 {
 
 fn build_field_headers(buf: &mut Vec<u8>, pkt_no: u8, field: &String) -> u8 {
     // First field
-    let packet_len = "def".len() + "demo".len() + "demotable".len() + "demotable".len() + field.len() + field.len() + 6 + 1 + 2 + 4 + 1 + 2 + 1 + 2;
+    let packet_len = "def".len()
+        + "demo".len()
+        + "demotable".len()
+        + "demotable".len()
+        + field.len()
+        + field.len()
+        + 6
+        + 1
+        + 2
+        + 4
+        + 1
+        + 2
+        + 1
+        + 2;
 
     buf.push((packet_len).try_into().unwrap());
     buf.push(0);
@@ -207,7 +242,9 @@ fn build_eof(buf: &mut Vec<u8>, pkt_no: u8, status: u16) -> u8 {
 }
 
 fn build_row(buf: &mut Vec<u8>, pkt_no: u8, row: &Vec<String>) -> u8 {
-    let length = (row.iter().fold(0, |a, x| a + x.len() + 1)).try_into().unwrap();
+    let length = (row.iter().fold(0, |a, x| a + x.len() + 1))
+        .try_into()
+        .unwrap();
 
     buf.push(length); // Length
     buf.push(0);
@@ -216,6 +253,5 @@ fn build_row(buf: &mut Vec<u8>, pkt_no: u8, row: &Vec<String>) -> u8 {
     for item in row {
         len_coded_string(buf, item.as_str());
     }
-    
     return 1;
 }
