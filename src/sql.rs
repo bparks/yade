@@ -56,6 +56,7 @@ pub enum Statement {
     Select(String),
     Update(String, Option<Vec<Setter>>, Option<Predicate>),
     CreateTable(String, Vec<Column>),
+    DescribeTable(String),
 }
 
 fn parse_column_name(s: &str) -> IResult<&str, Value> {
@@ -255,9 +256,19 @@ fn create_stmt(s: &str) -> IResult<&str, Statement> {
 
     return Ok((s, Statement::CreateTable(table.to_string(), columns)));
 }
+fn describe_stmt(s: &str) -> IResult<&str, Statement> {
+    let mut describe = tuple((
+        alt((tag("describe"), tag("explain"), tag("desc"))),
+        space1,
+        alphanumeric1,
+    ));
+    let (s, (_, _, table)) = describe(s)?;
+
+    return Ok((s, Statement::DescribeTable(table.to_string())));
+}
 
 pub fn parse(s: &str) -> Option<Statement> {
-    let mut parser = alt((select_stmt, update_stmt, create_stmt));
+    let mut parser = alt((select_stmt, update_stmt, create_stmt, describe_stmt));
 
     let result = parser(s);
     return match result {

@@ -27,6 +27,37 @@ fn get_schema(path: &String) -> yaml_rust::yaml::Hash {
     return schema.as_hash().unwrap().clone();
 }
 
+pub fn describe_table(path: &String) -> ResultSet {
+    if Path::new(&path).exists() {
+        let table_name = Path::new(path)
+            .file_name()
+            .and_then(|s| Some(s.to_str()?.to_string()))
+            .ok_or("")
+            .unwrap();
+        let schema_string = format!(
+            "create table {} (\n{}\n)",
+            table_name,
+            get_schema(path)
+                .iter()
+                .map(|(k, v)| format!("{} {}", stringify(k), stringify(v)))
+                .collect::<Vec<String>>()
+                .join(",\n")
+        );
+        return ResultSet {
+            fields: ["Table", "Create Table"]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            rows: Some(vec![vec![table_name, schema_string]]),
+        };
+    } else {
+        return ResultSet {
+            fields: Vec::new(),
+            rows: None,
+        };
+    }
+}
+
 pub fn list_files(path: &String) -> ResultSet {
     if Path::new(&path).exists() {
         let schema_hash = get_schema(path);

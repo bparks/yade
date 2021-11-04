@@ -135,6 +135,13 @@ fn execute_stmt(stmt: Statement, statement: &str, stream: &mut impl Write) {
             let ping_ok = Vec::from_hex("0700000100000002000000").unwrap();
             stream.write(&ping_ok).unwrap();
         }
+        Statement::DescribeTable(table) => {
+            let path = format!("{}{}", "./data/", table);
+            let results = store::describe_table(&path);
+            let ping_ok = build_response(results);
+            //println!("{:02x?}", &ping_ok);
+            stream.write(&ping_ok).unwrap();
+        }
     }
     println!("Done executing statement");
 }
